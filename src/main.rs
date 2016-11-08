@@ -2,7 +2,7 @@ extern crate discord;
 extern crate websocket;
 
 use discord::{Discord, ChannelRef, State};
-use discord::model::Event;
+use discord::model::{Event, User};
 use websocket::result::WebSocketError;
 
 fn rot13(c: char) -> char {
@@ -36,7 +36,7 @@ fn main() {
             Err(err) => {
                 if let discord::Error::WebSocket(ws_err) = err {
                     match ws_err {
-                        WebSocketError::IoError(io) => {},
+                        WebSocketError::IoError(_) => {},
                         _ => {
                             // We were disconnected, try to reconnect
                             println!("Reconnecting...");
@@ -62,7 +62,7 @@ fn main() {
 
         match event {
             Event::MessageCreate(message) => {
-                if message.author.id != state.user().id {
+                if message.author.id == state.user().id {
                     continue
                 }
 
@@ -76,8 +76,16 @@ fn main() {
 
                         let _ = discord.send_message(&channel.id, &new_message, "", false);
                     },
-                    Some(ChannelRef::Public(server, channel)) => {
+                    Some(ChannelRef::Public(_, channel)) => {
+                        // state.user() is not of the same type as message.mentions
+                        // Is there a better way to do this?
+                        let res: Vec<&User> = message.mentions.iter()
+                            .filter(|&u| u.id == state.user().id)
+                            .collect();
 
+                        if res.len() > 0 {
+                            let _ = discord.send_message(&channel.id, "I encode and decode ROT13 messages, just send me a DM!", "", false);
+                        }
                     },
                     None => println!("Got a message from an unknown channel??? From {} saying {}", message.author.name, message.content),
                     _ => {},
