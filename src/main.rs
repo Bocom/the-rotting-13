@@ -1,7 +1,9 @@
 extern crate discord;
+extern crate websocket;
 
 use discord::{Discord, ChannelRef, State};
 use discord::model::Event;
+use websocket::result::WebSocketError;
 
 fn rot13(c: char) -> char {
     let base: u8 = match c {
@@ -23,7 +25,7 @@ fn main() {
         &env::var("DISCORD_TOKEN").expect("Expected token")
     ).expect("login failed!");
 
-    let (mut connection, ready) = discord.connect().expect("connect failed");
+    let (mut connection, ready) = discord.connect().expect("Connection failed");
     let mut state = State::new(ready);
 
     println!("Connected!");
@@ -31,11 +33,27 @@ fn main() {
     loop {
         let event = match connection.recv_event() {
             Ok(event) => event,
-            Err(discord::Error::Closed(code, body)) => {
-                println!("[Error] Connection closed with status {:?}: {}", code, body);
-                break
-            },
             Err(err) => {
+                if let discord::Error::WebSocket(ws_err) = err {
+                    match ws_err {
+                        WebSocketError::IoError(io) => {},
+                        _ => {
+                            // We were disconnected, try to reconnect
+                            println!("Reconnecting...");
+                            let (new_connection, ready) = discord.connect().expect("Reconnect failed");
+                            connection = new_connection;
+                            state = State::new(ready);
+                            println!("Reconnected!");
+                        },
+                    }
+                    continue
+                }
+
+                if let discord::Error::Closed(code, body) = err {
+                    println!("[Error] Connection closed with status {:?}: {}", code, body);
+                    break
+                }
+
                 println!("[Warning] Receive error: {:?}", err);
                 continue
             }
@@ -56,10 +74,10 @@ fn main() {
                             new_message.push(rot13(chr));
                         }
 
-                        let _ = discord.send_message(&message.channel_id, &new_message, "", false);
+                        let _ = discord.send_message(&channel.id, &new_message, "", false);
                     },
                     Some(ChannelRef::Public(server, channel)) => {
-                        
+
                     },
                     None => println!("Got a message from an unknown channel??? From {} saying {}", message.author.name, message.content),
                     _ => {},
