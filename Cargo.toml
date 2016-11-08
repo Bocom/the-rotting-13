@@ -3,5 +3,8 @@ name = "rotting13-bot"
 version = "1.0.0"
 authors = ["Bocom"]
 
+[dependencies.websocket]
+version = "0.17"
+
 [dependencies]
 discord = { git = "https://github.com/SpaceManiac/discord-rs" }
