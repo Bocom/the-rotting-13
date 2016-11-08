@@ -44,12 +44,12 @@ fn main() {
 
         match event {
             Event::MessageCreate(message) => {
+                if message.author.id != state.user().id {
+                    continue
+                }
+
                 match state.find_channel(&message.channel_id) {
                     Some(ChannelRef::Private(channel)) => {
-                        if message.author.name != channel.recipient.name {
-                            continue
-                        }
-
                         let original_message = message.content;
                         let mut new_message = String::new();
                         for chr in original_message.chars() {
@@ -57,6 +57,9 @@ fn main() {
                         }
 
                         let _ = discord.send_message(&message.channel_id, &new_message, "", false);
+                    },
+                    Some(ChannelRef::Public(server, channel)) => {
+                        
                     },
                     None => println!("Got a message from an unknown channel??? From {} saying {}", message.author.name, message.content),
                     _ => {},
