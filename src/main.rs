@@ -2,7 +2,7 @@ extern crate discord;
 extern crate websocket;
 
 use discord::{Discord, ChannelRef, State};
-use discord::model::{Event, User};
+use discord::model::{Event, User, ReactionEmoji};
 use websocket::result::WebSocketError;
 
 fn rot13(c: char) -> char {
@@ -20,6 +20,8 @@ fn rot13(c: char) -> char {
 fn main() {
     use std::env;
     println!("The Rotting 13!");
+
+    let react_emoji = "rot13";
 
     let discord = Discord::from_bot_token(
         &env::var("DISCORD_TOKEN").expect("Expected token")
@@ -89,6 +91,37 @@ fn main() {
                     },
                     None => println!("Got a message from an unknown channel??? From {} saying {}", message.author.name, message.content),
                     _ => {},
+                }
+            },
+            Event::ReactionAdd(reaction) => {
+                let message = match discord.get_message(reaction.channel_id, reaction.message_id) {
+                    Ok(msg) => msg,
+                    Err(msg) => {
+                        println!("Could not find the message that was reacted to. Message ID {}", reaction.message_id);
+                        continue
+                    }
+                };
+
+                let react_emoji_name = match reaction.emoji {
+                    ReactionEmoji::Custom { name, id } => name,
+                    ReactionEmoji::Unicode(name) => name
+                };
+
+                if react_emoji_name != react_emoji {
+                    continue
+                }
+
+                match discord.create_private_channel(&reaction.user_id) {
+                    Ok(channel) => {
+                        let original_message = message.content;
+                        let mut new_message = String::new();
+                        for chr in original_message.chars() {
+                            new_message.push(rot13(chr));
+                        }
+
+                        let _ = discord.send_message(&channel.id, &new_message, "", false);
+                    },
+                    Err(_) => println!("Got an invalid reaction??? From user ID {} on message ID {}", reaction.user_id, reaction.message_id),
                 }
             },
             _ => {}
