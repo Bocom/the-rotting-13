@@ -5,6 +5,8 @@ use discord::{Discord, ChannelRef, State};
 use discord::model::{Event, User, ReactionEmoji};
 use websocket::result::WebSocketError;
 
+const REACTION_EMOJI: &'static str = "rot13";
+
 fn rot13(c: char) -> char {
     let base: u8 = match c {
         'a'...'z' => 'a' as u8,
@@ -20,8 +22,6 @@ fn rot13(c: char) -> char {
 fn main() {
     use std::env;
     println!("The Rotting 13!");
-
-    let react_emoji = "rot13";
 
     let discord = Discord::from_bot_token(
         &env::var("DISCORD_TOKEN").expect("Expected token")
@@ -94,22 +94,22 @@ fn main() {
                 }
             },
             Event::ReactionAdd(reaction) => {
+                let received_emoji = match reaction.emoji {
+                    ReactionEmoji::Custom { name, .. } => name,
+                    ReactionEmoji::Unicode(emoji) => emoji
+                };
+
+                if received_emoji != REACTION_EMOJI {
+                    continue
+                }
+
                 let message = match discord.get_message(reaction.channel_id, reaction.message_id) {
                     Ok(msg) => msg,
-                    Err(msg) => {
+                    Err(_) => {
                         println!("Could not find the message that was reacted to. Message ID {}", reaction.message_id);
                         continue
                     }
                 };
-
-                let react_emoji_name = match reaction.emoji {
-                    ReactionEmoji::Custom { name, id } => name,
-                    ReactionEmoji::Unicode(name) => name
-                };
-
-                if react_emoji_name != react_emoji {
-                    continue
-                }
 
                 match discord.create_private_channel(&reaction.user_id) {
                     Ok(channel) => {
