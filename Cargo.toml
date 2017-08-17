@@ -6,5 +6,6 @@ authors = ["Bocom"]
 [dependencies.websocket]
 version = "0.17"
 
-[dependencies]
-discord = { git = "https://github.com/SpaceManiac/discord-rs" }
+[dependencies.discord]
+default_features = false
+git = "https://github.com/SpaceManiac/discord-rs"

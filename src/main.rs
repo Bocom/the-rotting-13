@@ -68,7 +68,7 @@ fn main() {
                     continue
                 }
 
-                match state.find_channel(&message.channel_id) {
+                match state.find_channel(message.channel_id) {
                     Some(ChannelRef::Private(channel)) => {
                         let original_message = message.content;
                         let mut new_message = String::new();
@@ -76,7 +76,7 @@ fn main() {
                             new_message.push(rot13(chr));
                         }
 
-                        let _ = discord.send_message(&channel.id, &new_message, "", false);
+                        let _ = discord.send_message(channel.id, &new_message, "", false);
                     },
                     Some(ChannelRef::Public(_, channel)) => {
                         // state.user() is not of the same type as message.mentions
@@ -86,7 +86,7 @@ fn main() {
                             .collect();
 
                         if res.len() > 0 {
-                            let _ = discord.send_message(&channel.id, "I encode and decode ROT13 messages, just send me a DM!", "", false);
+                            let _ = discord.send_message(channel.id, "I encode and decode ROT13 messages, just send me a DM!", "", false);
                         }
                     },
                     None => println!("Got a message from an unknown channel??? From {} saying {}", message.author.name, message.content),
@@ -111,7 +111,7 @@ fn main() {
                     }
                 };
 
-                match discord.create_private_channel(&reaction.user_id) {
+                match discord.create_private_channel(reaction.user_id) {
                     Ok(channel) => {
                         let original_message = message.content;
                         let mut new_message = String::new();
@@ -119,7 +119,7 @@ fn main() {
                             new_message.push(rot13(chr));
                         }
 
-                        let _ = discord.send_message(&channel.id, &new_message, "", false);
+                        let _ = discord.send_message(channel.id, &new_message, "", false);
                     },
                     Err(_) => println!("Got an invalid reaction??? From user ID {} on message ID {}", reaction.user_id, reaction.message_id),
                 }
