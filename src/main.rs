@@ -89,7 +89,8 @@ fn main() {
                             .collect();
 
                         if res.len() > 0 {
-                            let _ = discord.send_message(channel.id, "I encode and decode ROT13 messages, just send me a DM!", "", false);
+                            let text_message = format!("I encode and decode ROT13 messages, just send me a DM with a message to encode or decode!\nYou can also react to a message with :{}: to get it sent as DM!", REACTION_EMOJI);
+                            let _ = discord.send_message(channel.id, &text_message, "", false);
                         }
                     },
                     None => println!("Got a message from an unknown channel??? From {} saying {}", message.author.name, message.content),
