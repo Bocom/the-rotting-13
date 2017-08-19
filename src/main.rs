@@ -31,6 +31,9 @@ fn main() {
     let mut state = State::new(ready);
 
     println!("Connected!");
+
+    let game_name = String::from("with words");
+    connection.set_game_name(game_name);
     
     loop {
         let event = match connection.recv_event() {
