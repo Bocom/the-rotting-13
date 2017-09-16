@@ -2,10 +2,11 @@ extern crate discord;
 extern crate websocket;
 
 use discord::{Discord, ChannelRef, State};
-use discord::model::{Event, User, ReactionEmoji};
+use discord::model::{Event, User, ReactionEmoji, PossibleServer, ServerId};
 use websocket::result::WebSocketError;
 
 const REACTION_EMOJI: &'static str = "rot13";
+const PLAYING_GAME_NAME: &'static str = "with words";
 
 fn rot13(c: char) -> char {
     let base: u8 = match c {
@@ -17,6 +18,15 @@ fn rot13(c: char) -> char {
     let ordinal = c as u8 - base;
     let rot = (ordinal + 13) % 26;
     (rot + base) as char
+}
+
+fn create_rot13_message(message: String) -> String {
+    let mut new_message = String::new();
+    for chr in message.chars() {
+        new_message.push(rot13(chr));
+    }
+
+    new_message
 }
 
 fn main() {
@@ -32,8 +42,7 @@ fn main() {
 
     println!("Connected!");
 
-    let game_name = String::from("with words");
-    connection.set_game_name(game_name);
+    connection.set_game_name(String::from(PLAYING_GAME_NAME));
     
     loop {
         let event = match connection.recv_event() {
@@ -45,10 +54,14 @@ fn main() {
                         _ => {
                             // We were disconnected, try to reconnect
                             println!("Reconnecting...");
+
                             let (new_connection, ready) = discord.connect().expect("Reconnect failed");
                             connection = new_connection;
+
                             state = State::new(ready);
+
                             println!("Reconnected!");
+                            connection.set_game_name(String::from(PLAYING_GAME_NAME));
                         },
                     }
                     continue
@@ -73,11 +86,7 @@ fn main() {
 
                 match state.find_channel(message.channel_id) {
                     Some(ChannelRef::Private(channel)) => {
-                        let original_message = message.content;
-                        let mut new_message = String::new();
-                        for chr in original_message.chars() {
-                            new_message.push(rot13(chr));
-                        }
+                        let new_message = create_rot13_message(message.content);
 
                         let _ = discord.send_message(channel.id, &new_message, "", false);
                     },
@@ -117,15 +126,22 @@ fn main() {
 
                 match discord.create_private_channel(reaction.user_id) {
                     Ok(channel) => {
-                        let original_message = message.content;
-                        let mut new_message = String::new();
-                        for chr in original_message.chars() {
-                            new_message.push(rot13(chr));
-                        }
-
+                        let new_message = create_rot13_message(message.content);
+                        
                         let _ = discord.send_message(channel.id, &new_message, "", false);
                     },
                     Err(_) => println!("Got an invalid reaction??? From user ID {} on message ID {}", reaction.user_id, reaction.message_id),
+                }
+            },
+            Event::ServerCreate(possible_server) => {
+                match possible_server {
+                    PossibleServer::Online(server) => {
+                        println!("Present in server {}", server.name);
+                    },
+                    PossibleServer::Offline(server_id) => {
+                        let ServerId(id) = server_id;
+                        println!("Present in offline server #{}", id);
+                    }
                 }
             },
             _ => {}
